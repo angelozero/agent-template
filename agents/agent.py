@@ -17,6 +17,7 @@ from config import track_agent
 
 load_dotenv()
 
+
 def build_model():
     """Constrói o modelo LLM apontando para o LiteLLM Proxy."""
     model = init_chat_model(
@@ -32,7 +33,7 @@ def build_model():
 def invoke_agent(message: str):
     """Ponto de entrada do agente."""
     model = build_model()
-    
+
     ### Carrega o prompt do MLflow Registry
     # "prompts:/prompt_cidades_capitais_br@latest" = última versão
     # "prompts:/prompt_cidades_capitais_br/1"      = versão específica
@@ -42,13 +43,21 @@ def invoke_agent(message: str):
     # Preenche as variáveis do template
     domain = os.getenv("DOMAIN", "domain_bar")
     messages = prompt.format(domain=domain, user_message=message)
-    
+
     # Chamada simples: envia mensagem e recebe resposta
     response = model.invoke(messages)
     return {"role": "assistant", "content": response.content}
 
 
 if __name__ == "__main__":
-    message = sys.argv[1] if len(sys.argv) > 1 else "Qual a capital do Brasil?"
+    message = (
+        sys.argv[1]
+        if len(sys.argv) > 1
+       # else "Quantas capitais tem o Brasil?"
+       # else "Quantas capitais tem o Brasil em relação ao Japão?"
+       # else "Nas minhas viagens eu estive no oriente, em relação ao Brasil quantos continentes no oriente nós temos?"
+       # else "Quantas ilhas nós temos em volta do Brasil?"
+       else "A bandeira do Brasil tem estrelas que se não me enganam representam as capitais do Brasil, é igual as estrelas da bandeira dos Estados Unidos?"
+    )
     result = invoke_agent(message)
-    print(result)
+    print(f"\n{result}\n")
