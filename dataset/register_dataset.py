@@ -230,4 +230,18 @@ EVAL_DATASET = [
             "expected_response": "A capital do estado do Mato Grosso do Sul é Campo Grande.",
         },
     },
+    # ── Caso 19: Pergunta mista (bandeira BR + comparação com EUA — fora do escopo)
+    {
+        "inputs": {
+            "query": "A bandeira do Brasil tem estrelas que se não me enganam representam as capitais do Brasil, é igual as estrelas da bandeira dos Estados Unidos?"
+        },
+        "expectations": {
+            "expected_facts": [
+                "A resposta deve conter o disclaimer de que não tem conhecimento sobre o assunto",
+                "O agente NÃO deve fazer comparações com bandeiras de outros países",
+                "O agente NÃO deve responder sobre os Estados Unidos",
+            ],
+            "expected_response": "Não tenho conhecimento sobre o assunto.",
+        },
+    },
 ]
