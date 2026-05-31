@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from ai_platform import track_agent
+from config import track_agent
 
 load_dotenv()
 
@@ -27,7 +27,7 @@ class MockLLM:
         }
 
 
-def build_agent():
+def build_model():
     """Constrói o 'agente' — neste caso, apenas o mock."""
     return MockLLM()
 
@@ -35,7 +35,7 @@ def build_agent():
 @track_agent
 def invoke_agent(message: str):
     """Ponto de entrada do agente. Mantenha essa assinatura"""
-    agent = build_agent()
+    agent = build_model()
     result = agent.invoke([{"role": "user", "content": message}])
     return result
 

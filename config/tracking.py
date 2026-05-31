@@ -1,7 +1,8 @@
 import mlflow
 import functools
 from dotenv import load_dotenv
-from ai_platform.config import load_config
+from mlflow.entities import ViewType
+from config.app_config import load_config
 from typing import Any, Callable, TypeVar
 
 # TypeVar("F") é para type hints — diz ao mypy que o tipo de retorno é o mesmo tipo da função decorada.
@@ -13,7 +14,7 @@ def track_agent(func: F) -> F:
     """Decorator que registra logs de execução no MLflow."""
 
     # @functools.wraps(func) preserva o nome e docstring da função original.
-    # Quando usamos @functools.wraps(func), o Python guarda a função original em wrapper.__wrapped__. 
+    # Quando usamos @functools.wraps(func), o Python guarda a função original em wrapper.__wrapped__.
     # O interceptor usa isso para chamar a função sem o decorator
     # Isso evita que mlflow.start_run() seja chamado duas vezes (uma pelo interceptor, outra pelo decorator).
     @functools.wraps(func)
@@ -29,11 +30,11 @@ def track_agent(func: F) -> F:
             mlflow.set_tags(
                 {
                     "ai_platform.agent_name": cfg.agent_name,
-                    #"ai_platform.team": cfg.team,
+                    # "ai_platform.team": cfg.team,
                     "ai_platform.domain": cfg.domain,
                     "ai_platform.enviroment": cfg.enviroment,
                     "ai_platform.framework": "langchain",
-                    "ai_platform.": "true",
+                    "ai_platform.is_agent": "true",
                 }
             )
 
@@ -67,12 +68,21 @@ def _print_run_summary(run_id: str, experiment: str, tracking_uri: str) -> None:
     print(f"{'─' * 52}\n")
 
 
-### MLFLOW ### 
+### MLFLOW ###
 def _setup_mlflow(cfg) -> None:
     """Configura o MLflow: URI, experimento e autolog"""
     # set_tracking_uri: diz ao MLflow onde está o servidor (Docker local).
+    experiment_name = _experiment_name(cfg)
     mlflow.set_tracking_uri(cfg.mlflow_tracking_uri)
-    mlflow.set_experiment(_experiment_name(cfg))
+
+    experiment = mlflow.get_experiment_by_name(experiment_name)
+
+    if experiment and experiment.lifecycle_stage == "deleted":
+        # Experimento existe mas foi deletado — restaura para poder reutilizá-lo
+        mlflow.tracking.MlflowClient().restore_experiment(experiment.experiment_id)
+
+    # set_experiment cria o experimento se não existir, ou seleciona se já existir (ativo)
+    mlflow.set_experiment(experiment_name)
 
     # langchain.autolog(log_traces=True): esta é a linha mais importante.
     # Ela faz o MLflow "espionar" todas as chamadas LangChain e registrar traces automaticamente.
