@@ -4,28 +4,29 @@
 
 - Registrar prompts como artefatos versionados no MLflow (Prompt Registry)
 - Carregar prompts dinamicamente no agente (em vez de hardcoded)
-- Vincular a versão do prompt usada a cada run
+- Evoluir prompts incrementalmente (v1 → v4)
 
 ---
 
 ## Conceito
 
-Até agora, o prompt está **hardcoded** no código:
+Até agora, o prompt poderia estar **hardcoded** no código:
 
 ```python
-SYSTEM_PROMPT = """Você é um assistente prestativo..."""  # ← fixo no código
+SYSTEM_PROMPT = """Você é um assistente..."""  # ← fixo no código
 ```
 
 O problema: para mudar o prompt, você precisa **alterar código e redeployar**. Com o Prompt Registry do MLflow, o prompt vira um **artefato versionado**.
 
 ```
 MLflow Prompt Registry
-├── assistente-einstein
-│   ├── v1 → "Você é um assistente..."
-│   ├── v2 → "Você é um médico especialista..."
-│   └── v3 → "Responda em formato JSON..."
+├── prompt_cidades_capitais_br
+│   ├── v1 → "Você é um assistente com conhecimento sobre o Brasil..."
+│   ├── v2 → "Você é um assistente especializado em capitais..." (+ regras)
+│   ├── v3 → "..." (+ regra: nunca responder sobre outros países)
+│   └── v4 → "..." (+ regra: apenas cidades/capitais do território BR)
 │
-└── Seu agent.py carrega: load_prompt("assistente-einstein@latest")
+└── Seu agent.py carrega: load_prompt("prompt_cidades_capitais_br@latest")
 ```
 
 ---
@@ -35,7 +36,7 @@ MLflow Prompt Registry
 Prompts e Experiments são **entidades separadas** no MLflow:
 
 ```
-MLflow UI (http://localhost:5000)
+MLflow UI (http://localhost:5050)
 ├── 📁 Experiments        ← seus runs ficam aqui
 ├── 📦 Models
 ├── 📝 Prompts            ← ⭐ SEUS PROMPTS FICAM AQUI (menu lateral)
@@ -46,61 +47,44 @@ A **associação** entre prompt e experimento acontece **automaticamente** quand
 
 ---
 
-## Passo 7.1 — Criar o script de registro de prompts
+## Passo 7.1 — Registrar o prompt v1 (genérico)
 
-Crie o arquivo `prompts/register_prompts.py`:
+Crie o arquivo `prompt/register_prompt_v1.py`:
 
 ```python
-"""
-Script para registrar/versionar prompts no MLflow Prompt Registry.
-
-Uso:
-    python prompts/register_prompts.py
-
-Cada execução cria uma NOVA VERSÃO do prompt (como um git commit).
-"""
+import os
 import mlflow
 from dotenv import load_dotenv
-import os
 
 load_dotenv()
+mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5050"))
 
-# ⚠️ CRÍTICO: configurar o tracking URI ANTES de qualquer operação
-mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000"))
-
-# ── Prompt v1: Assistente genérico ──────────────────────────────────────────
 prompt_v1 = mlflow.genai.register_prompt(
-    name="assistente-einstein",
+    name="prompt_cidades_capitais_br",
     template=[
         {
             "role": "system",
             "content": (
-                "Você é um assistente prestativo do Hospital Einstein. "
-                "Responda de forma clara, concisa e profissional. "
-                "Domínio: {{domain}}. "
-                "Se não souber a resposta, diga que não sabe."
+                "Você é um assistente com conhecimento sobre o Brasil"
+                "Responda de forma clara, concisa e profissional"
+                "Domínio: {{domain}}."
+                "Se não souber a resposta, diga que não sabe"
             ),
         },
-        {
-            "role": "user",
-            "content": "{{user_message}}",
-        },
+        {"role": "user", "content": "{{user_message}}"},
     ],
-    commit_message="v1: Prompt inicial do assistente genérico",
-    tags={
-        "author": "tutorial",
-        "domain": "geral",
-    },
+    commit_message="V1: Prompt Capitas Brasileiras",
+    tags={"author": "tutorial", "domain": "geral"},
 )
 
-print(f"✅ Prompt registrado: {prompt_v1.name} (versão {prompt_v1.version})")
+print(f"\n✅ Prompt registrado com sucesso - prompt: {prompt_v1.name} - version: {prompt_v1.version}\n")
 ```
 
 ### O que cada campo faz
 
 | Elemento | Explicação |
 |---|---|
-| `name="assistente-einstein"` | Identificador único do prompt (como nome de um repositório) |
+| `name="prompt_cidades_capitais_br"` | Identificador único do prompt (como nome de um repositório) |
 | `template=[{role, content}]` | O prompt em formato chat. Variáveis usam `{{duplas_chaves}}` |
 | `{{domain}}`, `{{user_message}}` | Variáveis preenchidas em runtime com `.format()` |
 | `commit_message` | Mensagem descritiva da versão (como git commit) |
@@ -108,32 +92,32 @@ print(f"✅ Prompt registrado: {prompt_v1.name} (versão {prompt_v1.version})")
 
 ---
 
-## Passo 7.2 — Registrar uma segunda versão
+## Passo 7.2 — Registrar o prompt v2 (com regras de formato)
 
-Crie `prompts/register_v2.py`:
+Crie `prompt/register_prompt_v2.py`:
 
 ```python
-"""Registra v2 do prompt com regras de formato."""
+import os
 import mlflow
 from dotenv import load_dotenv
-import os
 
 load_dotenv()
-mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000"))
+mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5050"))
 
 prompt_v2 = mlflow.genai.register_prompt(
-    name="assistente-einstein",  # ← MESMO nome = nova versão
+    # se 'name' estiver com o mesmo valor de prompt_v1 ele será sobrescrito mas manterá os versionamentos
+    name="prompt_cidades_capitais_br",
     template=[
         {
             "role": "system",
             "content": (
-                "Você é um assistente especializado do Hospital Einstein. "
+                "Você é um assistente especializado em capitais e cidades brasileiras. "
                 "Domínio: {{domain}}. "
                 "REGRAS: "
                 "1. Responda SEMPRE em português brasileiro. "
                 "2. Seja conciso (máximo 3 parágrafos). "
-                "3. Se a pergunta for sobre saúde, inclua o disclaimer: "
-                "'Esta informação é educativa e não substitui consulta médica.' "
+                "3. Se a pergunta for sobre qualquer outro assunto que não seja capitais ou cidades brasileiras, inclua o disclaimer: "
+                "'Não tenho conhecimento sobre o assunto.' "
                 "4. Se não souber, diga 'Não tenho essa informação.'"
             ),
         },
@@ -142,7 +126,7 @@ prompt_v2 = mlflow.genai.register_prompt(
             "content": "{{user_message}}",
         },
     ],
-    commit_message="v2: Adicionadas regras de formato e disclaimer de saúde",
+    commit_message="V2: Prompt Capitas Brasileiras",
     tags={
         "author": "tutorial",
         "domain": "geral",
@@ -150,98 +134,144 @@ prompt_v2 = mlflow.genai.register_prompt(
     },
 )
 
-print(f"✅ Prompt registrado: {prompt_v2.name} (versão {prompt_v2.version})")
+print(f"\n✅ Prompt registrado com sucesso - prompt: {prompt_v2.name} - version: {prompt_v2.version}\n")
 ```
 
 ---
 
-## Passo 7.3 — Verificar que os prompts foram salvos
+## Passo 7.3 — Registrar o prompt v3 (restrição a Brasil)
 
-Crie `prompts/verify_prompts.py`:
+Crie `prompt/register_prompt_v3.py`:
 
 ```python
-"""Verifica que os prompts foram registrados no MLflow."""
+import os
 import mlflow
 from dotenv import load_dotenv
-import os
 
 load_dotenv()
-mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000"))
+mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5050"))
 
-# Carregar a última versão
-prompt = mlflow.genai.load_prompt("prompts:/assistente-einstein@latest")
-print(f"Nome: {prompt.name}")
-print(f"Versão: {prompt.version}")
-print(f"Template: {prompt.template}")
+prompt_v2 = mlflow.genai.register_prompt(
+    name="prompt_cidades_capitais_br",
+    template=[
+        {
+            "role": "system",
+            "content": (
+                "Você é um assistente especializado em capitais e cidades brasileiras. "
+                "Domínio: {{domain}}. "
+                "REGRAS: "
+                "1. Responda SEMPRE em português brasileiro. "
+                "2. Seja conciso (máximo 3 parágrafos). "
+                "3. Se a pergunta for sobre qualquer outro assunto que não seja capitais ou cidades brasileiras, inclua o disclaimer: "
+                "'Não tenho conhecimento sobre o assunto.' "
+                "4. Se não souber, diga 'Não tenho essa informação.'"
+                "5. Nunca responda nada que não seja unica e exclusivamente sobre o Brasil"
+            ),
+        },
+        {
+            "role": "user",
+            "content": "{{user_message}}",
+        },
+    ],
+    commit_message="V2: Prompt Capitas Brasileiras",
+    tags={
+        "author": "tutorial",
+        "domain": "geral",
+        "change": "added-format-rules",
+    },
+)
 
-# Carregar versão específica
-prompt_v1 = mlflow.genai.load_prompt("prompts:/assistente-einstein/1")
-print(f"\nVersão 1: {prompt_v1.template}")
+print(f"\n✅ Prompt registrado com sucesso - prompt: {prompt_v2.name} - version: {prompt_v2.version}\n")
 ```
 
 ---
 
-## Passo 7.4 — Atualizar o agente para carregar prompt do Registry
+## Passo 7.4 — Registrar o prompt v4 (restrição a cidades/capitais do território BR)
 
-Atualize `examples/agent.py`:
+Crie `prompt/register_prompt_v4.py`:
 
 ```python
-"""Agente com prompt versionado via MLflow Prompt Registry."""
 import os
-from dotenv import load_dotenv
-from langchain.chat_models import init_chat_model
 import mlflow
-
-from ai_platform import track_agent
+from dotenv import load_dotenv
 
 load_dotenv()
+mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5050"))
 
+prompt_v2 = mlflow.genai.register_prompt(
+    name="prompt_cidades_capitais_br",
+    template=[
+        {
+            "role": "system",
+            "content": (
+                "Você é um assistente especializado em capitais e cidades brasileiras. "
+                "Domínio: {{domain}}. "
+                "REGRAS: "
+                "1. Responda SEMPRE em português brasileiro. "
+                "2. Seja conciso (máximo 3 parágrafos). "
+                "3. Se a pergunta for sobre qualquer outro assunto que não seja capitais ou cidades brasileiras, inclua o disclaimer: "
+                "'Não tenho conhecimento sobre o assunto.' "
+                "4. Se não souber, diga 'Não tenho essa informação.'"
+                "5. Nunca responda nada que não seja unica e exclusivamente sobre cidades ou capitais dentro do território brasileiro"
+            ),
+        },
+        {
+            "role": "user",
+            "content": "{{user_message}}",
+        },
+    ],
+    commit_message="V2: Prompt Capitas Brasileiras",
+    tags={
+        "author": "tutorial",
+        "domain": "geral",
+        "change": "added-format-rules",
+    },
+)
 
-def build_model():
-    return init_chat_model(
-        model="openai:gpt-4.1",
-        model_provider="openai",
-        base_url=os.getenv("LLM_BASE_URL"),
-        api_key=os.getenv("LLM_API_KEY"),
-    )
-
-
-@track_agent
-def invoke_agent(message: str):
-    """Ponto de entrada — agora com prompt dinâmico."""
-    model = build_model()
-
-    # ── Carrega o prompt do MLflow Registry ──────────────────────────
-    # "prompts:/assistente-einstein@latest" = última versão
-    # "prompts:/assistente-einstein/1"      = versão específica
-    prompt = mlflow.genai.load_prompt("prompts:/assistente-einstein@latest")
-
-    # Preenche as variáveis do template
-    domain = os.getenv("DOMAIN", "geral")
-    messages = prompt.format(domain=domain, user_message=message)
-
-    # Chama o LLM
-    response = model.invoke(messages)
-
-    # Associação manual: loga prompt usado como parâmetro e tag
-    mlflow.log_param("prompt_name", prompt.name)
-    mlflow.log_param("prompt_version", prompt.version)
-    mlflow.set_tag("ai_platform.prompt", f"{prompt.name}/v{prompt.version}")
-    mlflow.log_text(str(prompt.template), "prompts/template_used.txt")
-
-    return {"role": "assistant", "content": response.content}
-
-
-if __name__ == "__main__":
-    import sys
-    message = sys.argv[1] if len(sys.argv) > 1 else "O que é MLflow?"
-    result = invoke_agent(message)
-    print(result)
+print(f"\n✅ Prompt registrado com sucesso - prompt: {prompt_v2.name} - version: {prompt_v2.version}\n")
 ```
 
-### Por que a associação manual?
+---
 
-Quando você usa `load_prompt` dentro de um `start_run`, o MLflow **automaticamente** vincula a versão do prompt ao Run. Mas para garantir visibilidade, também logamos como parâmetro e tag — assim fica visível na lista de runs sem precisar abrir cada um.
+## Evolução dos prompts: v1 → v4
+
+| Versão | O que mudou | Por quê |
+|---|---|---|
+| **v1** | Prompt genérico sobre o Brasil | Ponto de partida — muito amplo |
+| **v2** | Adicionou regras de formato (idioma, concisão, disclaimer, fallback) | Agente respondia em inglês, sem limites |
+| **v3** | Adicionou regra 5: "nunca responder sobre outros países" | Agente ainda comparava Brasil com outros países |
+| **v4** | Refinou regra 5: "apenas cidades/capitais do território brasileiro" | Agente respondia sobre geografia física, economia, etc. |
+
+Cada versão é uma **iteração** baseada em testes reais. Na Etapa 8, veremos como usar Judges para avaliar automaticamente se o prompt está funcionando.
+
+---
+
+## Passo 7.5 — Atualizar o agente para carregar prompt do Registry
+
+O `agents/agent.py` já carrega o prompt dinamicamente:
+
+```python
+### Carrega o prompt do MLflow Registry
+# "prompts:/prompt_cidades_capitais_br@latest" = última versão
+# "prompts:/prompt_cidades_capitais_br/1"      = versão específica
+# "prompts:/prompt_cidades_capitais_br@prod"   = alias (ex: produção)
+prompt = mlflow.genai.load_prompt("prompts:/prompt_cidades_capitais_br@latest")
+
+# Preenche as variáveis do template
+domain = os.getenv("DOMAIN", "domain_bar")
+messages = prompt.format(domain=domain, user_message=message)
+
+# Chamada simples: envia mensagem e recebe resposta
+response = model.invoke(messages)
+```
+
+### Formas de carregar um prompt
+
+| URI | O que carrega |
+|---|---|
+| `prompts:/prompt_cidades_capitais_br@latest` | Última versão registrada |
+| `prompts:/prompt_cidades_capitais_br/1` | Versão específica (v1) |
+| `prompts:/prompt_cidades_capitais_br@prod` | Alias (ex: produção) |
 
 ---
 
@@ -249,24 +279,27 @@ Quando você usa `load_prompt` dentro de um `start_run`, o MLflow **automaticame
 
 ```bash
 # 1. MLflow rodando
-just up
+docker compose -f docker/docker-compose.yml up -d
 
-# 2. Registrar prompts
-python prompts/register_prompts.py
-# ✅ Prompt registrado: assistente-einstein (versão 1)
+# 2. Registrar prompts (execute cada um na ordem)
+uv run python prompt/register_prompt_v1.py
+# ✅ Prompt registrado com sucesso - prompt: prompt_cidades_capitais_br - version: 1
 
-python prompts/register_v2.py
-# ✅ Prompt registrado: assistente-einstein (versão 2)
+uv run python prompt/register_prompt_v2.py
+# ✅ Prompt registrado com sucesso - prompt: prompt_cidades_capitais_br - version: 2
 
-# 3. Verificar
-python prompts/verify_prompts.py
+uv run python prompt/register_prompt_v3.py
+# ✅ Prompt registrado com sucesso - prompt: prompt_cidades_capitais_br - version: 3
 
-# 4. Executar o agente (carrega prompt do registry)
-python examples/agent.py "O que é o Hospital Einstein?"
+uv run python prompt/register_prompt_v4.py
+# ✅ Prompt registrado com sucesso - prompt: prompt_cidades_capitais_br - version: 4
 
-# 5. No MLflow UI:
-#    - Menu "Prompts" → vê o prompt e suas versões
-#    - Menu "Experiments" → no Run, vê params/tags com versão do prompt
+# 3. Executar o agente (carrega prompt do registry)
+uv run python agents/agent.py "Qual a capital do Brasil?"
+
+# 4. No MLflow UI (http://localhost:5050):
+#    - Menu "Prompts" → vê o prompt e suas 4 versões
+#    - Menu "Experiments" → no Run, vê o prompt usado
 ```
 
 ---
@@ -275,10 +308,9 @@ python examples/agent.py "O que é o Hospital Einstein?"
 
 | Verificação | Comando |
 |---|---|
-| MLflow está rodando? | `curl http://localhost:5000/health` |
+| MLflow está rodando? | `curl http://localhost:5050/health` |
 | Tracking URI configurado? | Verifique `MLFLOW_TRACKING_URI` no `.env` |
-| Prompt foi registrado? | `python prompts/verify_prompts.py` |
-| Prompts na UI? | Menu lateral "Prompts" no MLflow |
+| Prompt foi registrado? | Verifique no menu "Prompts" do MLflow UI |
 
 ---
 

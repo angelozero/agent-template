@@ -13,14 +13,14 @@
 ```env
 AGENT_NAME=tutorial-agente
 TEAM_NAME=meu-time
-DOMAIN=geral
-ENVIRONMENT=dev
+DOMAIN=domain_bar
+ENVIROMENT=dev
 
 # LLM Gateway (LiteLLM Proxy)
-LLM_BASE_URL=https://flow.ciandt.com/flow-llm-proxy/v1
+LLM_BASE_URL=sua-url-do-litellm-proxy
 LLM_API_KEY=sua-api-key-aqui
 
-MLFLOW_TRACKING_URI=http://localhost:5000
+MLFLOW_TRACKING_URI=http://localhost:5050
 ```
 
 > **Atenção ao `/v1`**: o LangChain com `model_provider="openai"` espera que a URL termine em `/v1`, pois ele concatena `/chat/completions` no final.
@@ -33,35 +33,43 @@ Antes de rodar, descubra quais modelos seu LiteLLM Proxy oferece:
 
 ```bash
 curl -H "Authorization: Bearer SUA_API_KEY" \
-     https://flow.ciandt.com/flow-llm-proxy/v1/models
+     SUA_LLM_BASE_URL/models
 ```
 
 Use o `id` retornado como valor do `model` no código.
 
 ---
 
-## Passo 6.3 — Atualizar `examples/agent.py`
+## Passo 6.3 — Criar `agents/agent.py`
 
 ```python
-"""Agente com LLM real via LiteLLM Proxy."""
+import os
+import sys
+import mlflow
+from dotenv import load_dotenv
+from config import track_agent
+
+load_dotenv()
+
+"""
+Agente com LLM real via LiteLLM Proxy.
+"""
 import os
 from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
 
-from ai_platform import track_agent
+from config import track_agent
 
 load_dotenv()
-
-SYSTEM_PROMPT = """Você é um assistente prestativo. Responda de forma clara e concisa."""
 
 
 def build_model():
     """Constrói o modelo LLM apontando para o LiteLLM Proxy."""
     model = init_chat_model(
-        model="openai:gpt-4.1",              # (1) modelo disponível no seu LiteLLM
-        model_provider="openai",              # (2) usa protocolo OpenAI-compatible
-        base_url=os.getenv("LLM_BASE_URL"),   # (3) aponta para o LiteLLM Proxy
-        api_key=os.getenv("LLM_API_KEY"),     # (4) sua API key
+        model="gpt-5",
+        model_provider="openai",
+        base_url=os.getenv("LLM_BASE_URL"),
+        api_key=os.getenv("LLM_API_KEY"),
     )
     return model
 
@@ -70,19 +78,37 @@ def build_model():
 def invoke_agent(message: str):
     """Ponto de entrada do agente."""
     model = build_model()
-    response = model.invoke([
-        {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": message},
-    ])
+
+    ### Carrega o prompt do MLflow Registry
+    # "prompts:/prompt_cidades_capitais_br@latest" = última versão
+    # "prompts:/prompt_cidades_capitais_br/1"      = versão específica
+    # "prompts:/prompt_cidades_capitais_br@prod"   = alias (ex: produção)
+    prompt = mlflow.genai.load_prompt("prompts:/prompt_cidades_capitais_br@latest")
+
+    # Preenche as variáveis do template
+    domain = os.getenv("DOMAIN", "domain_bar")
+    messages = prompt.format(domain=domain, user_message=message)
+
+    # Chamada simples: envia mensagem e recebe resposta
+    response = model.invoke(messages)
     return {"role": "assistant", "content": response.content}
 
 
 if __name__ == "__main__":
-    import sys
-    message = sys.argv[1] if len(sys.argv) > 1 else "Qual a capital do Brasil?"
+    message = (
+        sys.argv[1]
+        if len(sys.argv) > 1
+       # else "Quantas capitais tem o Brasil?"
+       # else "Quantas capitais tem o Brasil em relação ao Japão?"
+       # else "Nas minhas viagens eu estive no oriente, em relação ao Brasil quantos continentes no oriente nós temos?"
+       # else "Quantas ilhas nós temos em volta do Brasil?"
+       else "A bandeira do Brasil tem estrelas que se não me enganam representam as capitais do Brasil, é igual as estrelas da bandeira dos Estados Unidos?"
+    )
     result = invoke_agent(message)
-    print(result)
+    print(f"\n{result}\n")
 ```
+
+> **Nota:** Este agente já integra o Prompt Registry (Etapa 7). Na primeira vez, você pode usar um prompt hardcoded e depois migrar para o Registry. Aqui mostramos a versão final.
 
 ---
 
@@ -90,7 +116,7 @@ if __name__ == "__main__":
 
 | Parâmetro | Valor | Explicação |
 |---|---|---|
-| `model` | `"openai:gpt-4.1"` | Prefixo `openai:` = provider OpenAI. `gpt-4.1` = nome do modelo no LiteLLM. |
+| `model` | `"gpt-5"` | Nome do modelo disponível no seu LiteLLM Proxy. |
 | `model_provider` | `"openai"` | Usa protocolo OpenAI (`/v1/chat/completions`). LiteLLM é compatível. |
 | `base_url` | do `.env` | URL do LiteLLM Proxy. LangChain faz `POST {base_url}/chat/completions`. |
 | `api_key` | do `.env` | Enviado como `Authorization: Bearer {api_key}` no header HTTP. |
