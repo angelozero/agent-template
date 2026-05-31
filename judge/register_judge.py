@@ -32,7 +32,7 @@ agent_name = os.getenv("AGENT_NAME", "agent_zero")
 mlflow.set_experiment(f"/{team}/{domain}/{agent_name}/evaluations")
 
 
-# ── Define a função que será avaliada ─────────────────────────────────────────
+# ── Define a função que será avaliada
 # O mlflow.genai.evaluate vai chamar esta função para cada item do dataset
 def predict_fn(query: str) -> dict:
     """Wrapper que chama o agente e retorna no formato esperado pelo evaluate."""
@@ -48,7 +48,7 @@ def predict_fn(query: str) -> dict:
     return {"response": response.content}
 
 
-# ── Define os Judges (avaliadores) ────────────────────────────────────────────
+# ── Define os Judges (avaliadores)
 scorers = [
     # Judge 1: Correctness — verifica se a resposta contém os fatos esperados
     Correctness(model=JUDGE_MODEL),
@@ -70,7 +70,7 @@ scorers = [
 ]
 
 
-# ── Executa a avaliação ──────────────────────────────────────────────────────
+# ── Executa a avaliação
 print("🔍 Iniciando avaliação...")
 print(f"   Dataset: {len(EVAL_DATASET)} casos de teste")
 print(f"   Judges: {[s.__class__.__name__ for s in scorers]}")
@@ -82,7 +82,7 @@ results = mlflow.genai.evaluate(
     scorers=scorers,        # judges que avaliam as respostas
 )
 
-# ── Exibe resultados ─────────────────────────────────────────────────────────
+# ── Exibe resultados 
 print("\n📊 Resultados da avaliação:")
 print("─" * 52)
 for metric_name, metric_value in results.metrics.items():
