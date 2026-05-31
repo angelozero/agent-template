@@ -1,0 +1,45 @@
+[project]
+name = "hiae-ai-agent-template"
+version = "0.1.0"
+description = "Template de referência para agentes de IA generativa — HIAE AI Platform"
+requires-python = ">=3.12"
+dependencies = [
+    # Plataforma AI (não remover)
+    "mlflow[langchain]>=3.0,<4.0",
+    "python-dotenv>=1.0",
+    # Framework de agentes (adapte conforme necessário)
+    "langchain>=0.3",
+    "langchain-core>=0.3",
+    "langgraph>=0.2",
+    "langchain-community>=0.3",
+    # Ferramentas do agente de exemplo (remova se não precisar)
+    "langchain-tavily>=0.1",
+    "langchain-openai>=1.2.2",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.9",
+    "mypy>=1.10",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# Wheel (.whl) é o formato padrão de distribuição de pacotes Python
+[tool.hatch.build.targets.wheel]
+packages = ["ai_platform"]
+
+# [tool.ruff]
+# line-length = 100
+# target-version = "py312"
+# 
+# [tool.ruff.lint]
+# select = ["E", "F", "I", "UP"]
+# 
+# [tool.pytest.ini_options]
+# testpaths = ["tests"]
+# addopts = "--cov=ai_platform --cov-report=term-missing"
