@@ -348,7 +348,7 @@ Saída esperada:
   ✅ Modelo carregado com sucesso.
 
 ═══════════════════════════════════════════════════════
-  🧪 ETAPA 3 — EXECUTANDO PREDIÇÃO
+  🧪 ETAPA 3 — EXECUTANDO AGENTE SALVO NO MLFLOW
 ═══════════════════════════════════════════════════════
   Mensagem   : Qual a capital do Brasil?
 
