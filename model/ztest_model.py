@@ -129,5 +129,5 @@ if __name__ == "__main__":
     # 2. Baixa o modelo registrado e testa chamando .predict()
     test_model(
         model_uri=model_info.model_uri,
-        message="Quantas capitais o Brasil tem em seu registro?",
+        message="Qual o valor total de capitais do Brasil?",
     )

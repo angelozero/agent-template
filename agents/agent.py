@@ -61,7 +61,7 @@ if __name__ == "__main__":
     message = (
         sys.argv[1]
         if len(sys.argv) > 1
-       else "Quantas capitais tem o Brasil?"
+       else "Quantas capitais tem o Japão?"
        # else "Quantas capitais tem o Brasil em relação ao Japão?"
        # else "Nas minhas viagens eu estive no oriente, em relação ao Brasil quantos continentes no oriente nós temos?"
        # else "Quantas ilhas nós temos em volta do Brasil?"
