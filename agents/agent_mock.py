@@ -1,4 +1,14 @@
 import os
+import sys
+from pathlib import Path
+
+# Garante que a raiz do projeto está no sys.path independente de como o arquivo
+# é executado (python agents/agent_mock.py ou uv run python agents/agent_mock.py).
+# Deve ficar ANTES de qualquer import de módulos do projeto (config, etc).
+_PROJECT_ROOT = str(Path(__file__).parent.parent)
+if _PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, _PROJECT_ROOT)
+
 from dotenv import load_dotenv
 from config import track_agent
 
@@ -42,6 +52,12 @@ def invoke_agent(message: str):
 
 if __name__ == "__main__":
     import sys
+    from pathlib import Path
+
+    # Garante que a raiz do projeto está no sys.path quando o arquivo
+    # é executado diretamente (python agents/agent_mock.py).
+    # Sem isso, `from config import ...` falha pois o Python usa agents/ como base.
+    sys.path.insert(0, str(Path(__file__).parent.parent))
 
     message = (
         sys.argv[1] if len(sys.argv) > 1 else "Qual a previsão do tempo em São Paulo?"

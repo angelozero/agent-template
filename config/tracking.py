@@ -93,4 +93,4 @@ def _setup_mlflow(cfg) -> None:
 # set_experiment: cria/seleciona o experimento com nome hierárquico /<TIME>/<DOMINIO>/<AGENTE>.
 def _experiment_name(cfg) -> str:
     """Gera o nome do experimento: /<TIME>/<DOMINIO>/<AGENTE>"""
-    return f"/{cfg.team}/{cfg.domain}/{cfg.agent_name}"
+    return f"{cfg.team}/{cfg.domain}/{cfg.agent_name}"

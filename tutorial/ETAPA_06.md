@@ -66,7 +66,7 @@ load_dotenv()
 def build_model():
     """Constrói o modelo LLM apontando para o LiteLLM Proxy."""
     model = init_chat_model(
-        model="gpt-5",
+        model="gpt-4o-mini",
         model_provider="openai",
         base_url=os.getenv("LLM_BASE_URL"),
         api_key=os.getenv("LLM_API_KEY"),
@@ -116,7 +116,7 @@ if __name__ == "__main__":
 
 | Parâmetro | Valor | Explicação |
 |---|---|---|
-| `model` | `"gpt-5"` | Nome do modelo disponível no seu LiteLLM Proxy. |
+| `model` | `"gpt-4o-mini"` | Nome do modelo disponível no seu LiteLLM Proxy. |
 | `model_provider` | `"openai"` | Usa protocolo OpenAI (`/v1/chat/completions`). LiteLLM é compatível. |
 | `base_url` | do `.env` | URL do LiteLLM Proxy. LangChain faz `POST {base_url}/chat/completions`. |
 | `api_key` | do `.env` | Enviado como `Authorization: Bearer {api_key}` no header HTTP. |

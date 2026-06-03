@@ -16,6 +16,7 @@ Template de projeto para desenvolvimento local de agentes de IA generativa integ
 | [Etapa 6](ETAPA_06.md) | LLM Real (LiteLLM) | `init_chat_model`, traces reais, troubleshooting |
 | [Etapa 7](ETAPA_07.md) | Prompt Registry | Versionamento de prompts, `load_prompt`, evolução v1→v4 |
 | [Etapa 8](ETAPA_08.md) | Evaluation + Judges | Dataset de teste, Correctness, Guidelines, Judge Config |
+| [Etapa 9](ETAPA_09.md) | Model Registry | `PythonModel`, empacotamento PyFunc, versionamento do agente |
 
 ---
 
@@ -68,6 +69,8 @@ Etapa 6 — LLM Real (LiteLLM Proxy)
 Etapa 7 — Prompt Registry (versionamento v1→v4)
     ↓
 Etapa 8 — Evaluation + Judges
+    ↓
+Etapa 9 — Model Registry (empacotamento PyFunc + versionamento)
 ```
 
 Comece pela [Etapa 1](ETAPA_01.md) →

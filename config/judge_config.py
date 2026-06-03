@@ -19,7 +19,7 @@ load_dotenv()
 
 # ── Modelo usado pelos LLM Judges ────────────────────────────────────────────
 # Deve estar disponível no LiteLLM Proxy. Formato: "openai:/<model_name>"
-JUDGE_MODEL = os.getenv("JUDGE_MODEL", "openai:/gpt-5")
+JUDGE_MODEL = os.getenv("JUDGE_MODEL", "openai:/gpt-4o-mini")
 
 
 def setup_judge_provider():

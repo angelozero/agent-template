@@ -145,7 +145,7 @@ load_dotenv()
 
 # ── Modelo usado pelos LLM Judges ────────────────────────────────────────────
 # Deve estar disponível no LiteLLM Proxy. Formato: "openai:/<model_name>"
-JUDGE_MODEL = os.getenv("JUDGE_MODEL", "openai:/gpt-5")
+JUDGE_MODEL = os.getenv("JUDGE_MODEL", "openai:/gpt-4o-mini")
 
 
 def setup_judge_provider():
@@ -329,7 +329,7 @@ print(f"\n🔗 Veja detalhes no MLflow UI: http://localhost:5050")
 
 ### Importante: `model=JUDGE_MODEL`
 
-Todos os scorers recebem `model=JUDGE_MODEL` para usar o modelo configurado no `config/judge_config.py`. O formato é `"openai:/<model_name>"` (ex: `"openai:/gpt-5"`).
+Todos os scorers recebem `model=JUDGE_MODEL` para usar o modelo configurado no `config/judge_config.py`. O formato é `"openai:/<model_name>"` (ex: `"openai:/gpt-4o-mini"`).
 
 ### Importante: `predict_fn(query: str)`
 
